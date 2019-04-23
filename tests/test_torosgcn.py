@@ -274,7 +274,7 @@ class TestScheduler(unittest.TestCase):
                        }
         mock_config.get_config_for_key.side_effect = [
             self.obs, "./torosgcn/aux_files/GWGCCatalog.txt", cat_filters]
-        skymap_path = "./tests/test_bayestar.fits"
+        skymap_path = "./tests/test_bayestar.fits.gz"
         obs_ret = torosgcn.scheduler.generate_targets(skymap_path)
         self.assertEqual(len(obs_ret), 2)
         eaba = obs_ret[0]
