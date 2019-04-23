@@ -212,6 +212,27 @@ class TestListen(unittest.TestCase):
         self.assertTrue(mock_sendemail.called)
         self.assertTrue(mock_session.called)
 
+    @mock.patch('torosgcn.listen.upload_gcnnotice')
+    @mock.patch('torosgcn.listen.sendalertemail')
+    @mock.patch('torosgcn.listen.backup_voe')
+    @mock.patch('torosgcn.listen.getinfo')
+    @mock.patch('builtins.open')
+    @mock.patch('torosgcn.listen.config.get_config_for_key')
+    def test_process_gcn(
+            self, mock_config, mock_open, mock_info,
+            mock_backup, mock_email, mock_upload):
+        def get_conf(arg):
+            if arg == 'DEBUG_TEST':
+                return True
+            return None
+        mock_config.side_effect = get_conf
+        mock_info.return_value = self.info
+        from . import sample_data
+        from lxml.etree import fromstring
+        root = fromstring(sample_data.preliminary_voe)
+        payload = bytes(sample_data.preliminary_voe, encoding='utf8')
+        torosgcn.listen.process_gcn(payload, root)
+
 
 class TestScheduler(unittest.TestCase):
     def setUp(self):

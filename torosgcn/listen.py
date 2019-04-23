@@ -333,10 +333,7 @@ def backup_voe(voevent_filename, info):
     gcn.notice_types.LVC_RETRACTION)
 def process_gcn(payload, root):
     "The callback function when a GCN is received."
-    try:
-        from conf import DEBUG_TEST
-    except ImportError:
-        DEBUG_TEST = False
+    DEBUG_TEST = config.get_config_for_key('DEBUG_TEST') or False
 
     # Save payload (VOE) to file
     voevent_filename = 'VOEvent.xml'
@@ -351,7 +348,7 @@ def process_gcn(payload, root):
         info = {}
 
     if not DEBUG_TEST:
-        if info['role'] == 'test':
+        if info.get('role') == 'test':
             logger.debug("Received Mock VOEvent.")
             return
 
@@ -374,7 +371,6 @@ def process_gcn(payload, root):
 
 def main():
     # Set up logging
-    from . import config
     config.init_logger()
 
     # Listen for GCNs until the program is interrupted
