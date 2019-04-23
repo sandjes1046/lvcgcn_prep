@@ -233,6 +233,35 @@ class TestListen(unittest.TestCase):
         payload = bytes(sample_data.preliminary_voe, encoding='utf8')
         torosgcn.listen.process_gcn(payload, root)
 
+    @mock.patch('torosgcn.listen.config.get_config_for_key')
+    @mock.patch('shutil.copyfile')
+    @mock.patch('torosgcn.listen.os')
+    def test_backup_voe(self, mock_os, mock_copyfile, mock_config):
+        def get_conf(arg):
+            if arg == 'Backup':
+                bkp = {
+                    'VOEvent Backup Dir': 'some/path',
+                    'Do Backup': True,
+                    }
+                return bkp
+            return None
+        fp = tempfile.NamedTemporaryFile("w+")
+        fp.write('Testing')
+        fp.seek(0)
+        mock_os.path.exists.return_value = True
+        mock_os.path.join.return_value = "some/path/file.xml"
+        torosgcn.listen.backup_voe(fp.name, self.info)
+        fp.close()
+        (input_file, output_file), cp_kwarg = mock_copyfile.call_args
+        self.assertTrue(mock_copyfile.called)
+        self.assertEqual(input_file, fp.name)
+        self.assertEqual(output_file, "some/path/file.xml")
+        self.assertTrue(loguru.logger.info.called)
+
+        mock_os.path.exists.return_value = False
+        torosgcn.listen.backup_voe(fp.name, self.info)
+        self.assertTrue(mock_os.makedirs.called)
+
 
 class TestScheduler(unittest.TestCase):
     def setUp(self):

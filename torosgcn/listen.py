@@ -314,12 +314,15 @@ def upload_gcnnotice(info):
 
 def backup_voe(voevent_filename, info):
     from shutil import copyfile
-    voevent_bkpdir = 'VOEvents'
+    bkp_config = config.get_config_for_key('Backup')
+    if not bkp_config.get('Do Backup'):
+        return
+    voevent_bkpdir = bkp_config.get('VOEvent Backup Dir')
     if not os.path.exists(voevent_bkpdir):
         os.makedirs(voevent_bkpdir)
 
     voevent_bkpname = "VOE_{}_{}.xml".\
-        format(info['graceid'], info['alert_type'])
+        format(info.get('graceid'), info.get('alert_type'))
 
     copyfile(voevent_filename, os.path.join(voevent_bkpdir, voevent_bkpname))
     logger.info("VOE file {} copied to {}".format(
