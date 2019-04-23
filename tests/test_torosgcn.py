@@ -91,26 +91,39 @@ class TestListen(unittest.TestCase):
         self.obs_trg[0]['targets'] = t_targets[:self.ntarg]
         self.obs_trg[1]['targets'] = t_targets[self.ntarg:]
 
-    def test_sendemail(self):
-        test_config = ("Email Configuration: {\n"
-                       "  SMTP Domain: mta.ad.utrgv.edu:25,\n"
-                       "  Sender Address: torosligoalerts@mta.ad.utrgv.edu,\n"
-                       "  Login Required: false,\n"
-                       "  Username: null,  # null if not needed\n"
-                       "  Password: null,  # null if not needed\n"
-                       "  Recipients File: recipients.txt\n"
-                       "}")
-        torosgcn.config._CONFIG_IS_LOADED = False
+    @mock.patch('torosgcn.listen.config.get_config_for_key')
+    def test_sendemail(self, mock_conf):
         fp = tempfile.NamedTemporaryFile("w+")
-        torosgcn.config.CONFIG_PATH = fp.name
-        fp.write(test_config)
+        fp.write('person01@example.com\nperson02@example.com')
         fp.seek(0)
-
-        msg_text = "If you received this email, the test passed OK.\n"
-        subject = "Test case: test_sendemail_one_recip"
+        def get_config(arg):
+            if arg == 'Email Configuration':
+                return {
+                    'SMTP Domain': 'smtp.example.com:25',
+                    'Sender Address': 'sender@example.com',
+                    'Login Required': True,
+                    'Username': 'sender',
+                    'Password': '$ecretP4ssw0rd',
+                    'Recipients File': fp.name,
+                }
+            elif arg == 'Admin Emails':
+                return ['admin@example.com',]
+            else:
+                return None
+        mock_conf.side_effect = get_config
+        subject = "To whom it may concern"
+        msg_text = "I hope this finds you well.\n"
         recipient = ['user@example.com', ]
         torosgcn.listen.sendemail(msg_text, subject, recipients=recipient)
         self.assertTrue(smtplib.SMTP.called)
+        torosgcn.listen.sendemail(msg_text, subject, recipients=None)
+        self.assertTrue(smtplib.SMTP.called)
+        smtplib.SMTP.side_effect = ValueError
+        torosgcn.listen.sendemail(msg_text, subject, recipients=recipient)
+        self.assertTrue(loguru.logger.error.called)
+        smtplib.SMTP.side_effect = ValueError
+        fp.close()
+        smtplib.SMTP.side_effect = None
 
     @mock.patch('torosgcn.listen.config')
     @mock.patch('torosgcn.listen.sendemail')
@@ -266,7 +279,7 @@ class TestScheduler(unittest.TestCase):
         self.assertTrue('O3' in json_str)
 
     @mock.patch('torosgcn.scheduler.config')
-    def test_generate_targets(self, mock_config):
+    def notest_generate_targets(self, mock_config):
         cat_filters = {'NUM_TARGETS': 30,
                        'MAX_DIST': 120,
                        'MAX_APP_MAG': 19.0,
