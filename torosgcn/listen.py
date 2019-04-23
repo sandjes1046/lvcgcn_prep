@@ -5,6 +5,7 @@ import gcn.handlers
 import gcn.notice_types
 import os
 from . import config
+from . import scheduler
 from loguru import logger
 
 
@@ -210,8 +211,6 @@ def getinfo(root):
 
 
 def upload_gcnnotice(info):
-    import scheduler
-
     if info.get('skymap_url') is not None:
         fitsfilename = 'skymap_basic_{}.fits'.format(info.get('graceid'))
         try:
@@ -252,14 +251,14 @@ def upload_gcnnotice(info):
                 "and the LVC event page: {}\n\n{}")\
                 .format(
                     pre_warning,
-                    info['alert_type'],
-                    info['graceid'],
-                    info['graceid'],
-                    info['eventpage'],
+                    info.get('alert_type'),
+                    info.get('graceid'),
+                    info.get('graceid'),
+                    info.get('eventpage'),
                     broker_uploadstring,
                     )
     email_subject = "{}{} GCN for {}".format(
-        pre_subject, info['alert_type'], info['graceid'],
+        pre_subject, info.get('alert_type'), info.get('graceid'),
         )
 
     # Get Broker website config
@@ -300,10 +299,10 @@ def upload_gcnnotice(info):
             "and the LVC event page: {}\n\n{}")\
             .format(
                 pre_warning,
-                info['alert_type'],
-                info['graceid'],
-                info['graceid'],
-                info['eventpage'],
+                info.get('alert_type'),
+                info.get('graceid'),
+                info.get('graceid'),
+                info.get('eventpage'),
                 broker_uploadstring,
                 )
         logger.exception("Could not upload target list using HTTP post method.")
