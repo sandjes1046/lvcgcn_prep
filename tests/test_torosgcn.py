@@ -188,12 +188,15 @@ class TestListen(unittest.TestCase):
         self.assertTrue('gcndatetime' in info_ret)
         self.assertTrue('datetime' in info_ret)
 
+    @mock.patch('builtins.open')
+    @mock.patch('requests.get')
     @mock.patch('requests.session')
     @mock.patch('torosgcn.listen.sendemail')
     @mock.patch('torosgcn.listen.config.get_config_for_key')
     @mock.patch('torosgcn.listen.scheduler.generate_targets')
     def test_upload_gcnnotice(self,
-            mock_gen_targets, mock_get_conf, mock_sendemail, mock_session):
+            mock_gen_targets, mock_get_conf, mock_sendemail,
+            mock_session, mock_get, mock_open):
         mock_gen_targets.return_value = self.obs_trg
         def get_conf(arg):
             if arg == 'Broker Upload':
@@ -211,6 +214,7 @@ class TestListen(unittest.TestCase):
         torosgcn.listen.upload_gcnnotice(self.info)
         self.assertTrue(mock_sendemail.called)
         self.assertTrue(mock_session.called)
+        self.assertTrue(mock_get.called)
 
     @mock.patch('torosgcn.listen.upload_gcnnotice')
     @mock.patch('torosgcn.listen.sendalertemail')
@@ -286,6 +290,39 @@ class TestListen(unittest.TestCase):
         self.assertTrue(mock_email.called)
         self.assertTrue(mock_upload.called)
         self.assertTrue(loguru.logger.exception.called)
+        mock_backup.side_effect = None
+
+        mock_email.side_effect = ValueError
+        mock_config.reset_mock()
+        mock_info.reset_mock()
+        mock_backup.reset_mock()
+        mock_email.reset_mock()
+        mock_upload.reset_mock()
+        loguru.logger.reset_mock()
+        torosgcn.listen.process_gcn(payload, root)
+        self.assertTrue(mock_config.called)
+        self.assertTrue(mock_info.called)
+        self.assertTrue(mock_backup.called)
+        self.assertTrue(mock_email.called)
+        self.assertTrue(mock_upload.called)
+        self.assertTrue(loguru.logger.exception.called)
+        mock_email.side_effect = None
+
+        mock_upload.side_effect = ValueError
+        mock_config.reset_mock()
+        mock_info.reset_mock()
+        mock_backup.reset_mock()
+        mock_email.reset_mock()
+        mock_upload.reset_mock()
+        loguru.logger.reset_mock()
+        torosgcn.listen.process_gcn(payload, root)
+        self.assertTrue(mock_config.called)
+        self.assertTrue(mock_info.called)
+        self.assertTrue(mock_backup.called)
+        self.assertTrue(mock_email.called)
+        self.assertTrue(mock_upload.called)
+        self.assertTrue(loguru.logger.exception.called)
+        mock_upload.side_effect = None
 
 
     @mock.patch('torosgcn.listen.config.get_config_for_key')
