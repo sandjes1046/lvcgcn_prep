@@ -279,7 +279,7 @@ class TestScheduler(unittest.TestCase):
         self.assertTrue('O3' in json_str)
 
     @mock.patch('torosgcn.scheduler.config')
-    def notest_generate_targets(self, mock_config):
+    def test_generate_targets(self, mock_config):
         cat_filters = {'NUM_TARGETS': 30,
                        'MAX_DIST': 120,
                        'MAX_APP_MAG': 19.0,
