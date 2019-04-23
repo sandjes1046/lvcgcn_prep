@@ -232,6 +232,61 @@ class TestListen(unittest.TestCase):
         root = fromstring(sample_data.preliminary_voe)
         payload = bytes(sample_data.preliminary_voe, encoding='utf8')
         torosgcn.listen.process_gcn(payload, root)
+        self.assertTrue(mock_config.called)
+        self.assertTrue(mock_info.called)
+        self.assertTrue(mock_backup.called)
+        self.assertTrue(mock_email.called)
+        self.assertTrue(mock_upload.called)
+
+        mock_info.side_effect = ValueError
+        torosgcn.listen.process_gcn(payload, root)
+        self.assertTrue(mock_config.called)
+        self.assertTrue(mock_info.called)
+        self.assertTrue(mock_backup.called)
+        self.assertTrue(mock_email.called)
+        self.assertTrue(mock_upload.called)
+        self.assertTrue(loguru.logger.exception.called)
+        mock_info.side_effect = None
+
+        def get_conf_debug(arg):
+            if arg == 'DEBUG_TEST':
+                return False
+            return None
+        info_test = self.info.copy()
+        info_test['role'] = 'test'
+        mock_info.return_value = info_test
+        mock_config.side_effect = get_conf_debug
+        mock_config.reset_mock()
+        mock_info.reset_mock()
+        mock_backup.reset_mock()
+        mock_email.reset_mock()
+        mock_upload.reset_mock()
+        loguru.logger.reset_mock()
+        torosgcn.listen.process_gcn(payload, root)
+        self.assertTrue(mock_config.called)
+        self.assertTrue(mock_info.called)
+        self.assertFalse(mock_backup.called)
+        self.assertFalse(mock_email.called)
+        self.assertFalse(mock_upload.called)
+        self.assertTrue(loguru.logger.debug.called)
+        mock_info.side_effect = None
+
+        mock_info.return_value = self.info
+        mock_backup.side_effect = ValueError
+        mock_config.reset_mock()
+        mock_info.reset_mock()
+        mock_backup.reset_mock()
+        mock_email.reset_mock()
+        mock_upload.reset_mock()
+        loguru.logger.reset_mock()
+        torosgcn.listen.process_gcn(payload, root)
+        self.assertTrue(mock_config.called)
+        self.assertTrue(mock_info.called)
+        self.assertTrue(mock_backup.called)
+        self.assertTrue(mock_email.called)
+        self.assertTrue(mock_upload.called)
+        self.assertTrue(loguru.logger.exception.called)
+
 
     @mock.patch('torosgcn.listen.config.get_config_for_key')
     @mock.patch('shutil.copyfile')
