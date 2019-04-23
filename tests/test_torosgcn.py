@@ -56,6 +56,41 @@ class TestConfig(unittest.TestCase):
 
 
 class TestListen(unittest.TestCase):
+    def setUp(self):
+        self.info = {'role': 'drill',
+                     'graceid': 'D190422ab',
+                     'alert_type': 'Initial',
+                     'eventpage': 'http://someurl.com/view',
+                     'skymap_url': 'http://download/skymap',
+                     'bnsprob': 0.7,
+                     'nsbhprob': 0.1,
+                     'bbhprob': 0.0,
+                     'nsprob': 0.5,
+                     'remnprob': 0.99,
+                     'gcndatetime': '2019-04-22T00:00:00',
+                     'datetime': '2019-04-22T03:12:23',
+                    }
+        from astropy.coordinates import EarthLocation
+        self.obs = [
+            {
+             'name': 'EABA',
+             'location': EarthLocation.from_geodetic(-64.5467, -31.5983, 1350),
+            },
+            {
+             'name': 'CTMO',
+             'location': EarthLocation.from_geodetic(-97.568956, 25.995789, 12),
+            },
+            ]
+        from astropy.io import ascii
+        import numpy as np
+        from . import sample_data
+        self.ntarg = 10
+        t_targets = ascii.read(sample_data.minicat)[:2 * self.ntarg]
+        t_targets['Likelihood'] = np.random.random(2 * self.ntarg)
+        self.obs_trg = self.obs.copy()
+        self.obs_trg[0]['targets'] = t_targets[:self.ntarg]
+        self.obs_trg[1]['targets'] = t_targets[self.ntarg:]
+
     def test_sendemail(self):
         test_config = ("Email Configuration: {\n"
                        "  SMTP Domain: mta.ad.utrgv.edu:25,\n"
@@ -81,20 +116,7 @@ class TestListen(unittest.TestCase):
     @mock.patch('torosgcn.listen.sendemail')
     def test_sendalertemail(self, mock_sendemail, mock_config):
         mock_config.get_config_for_key.return_value(['admin@example.com'])
-        info = {'role': 'drill',
-                'graceid': 'D190422ab',
-                'alert_type': 'Initial',
-                'eventpage': 'http://someurl.com/view',
-                'skymap_url': 'http://download/skymap',
-                'bnsprob': 0.7,
-                'nsbhprob': 0.1,
-                'bbhprob': 0.0,
-                'nsprob': 0.5,
-                'remnprob': 0.99,
-                'gcndatetime': '2019-04-22T00:00:00',
-                'datetime': '2019-04-22T03:12:23',
-               }
-        torosgcn.listen.sendalertemail("some path", info)
+        torosgcn.listen.sendalertemail("some path", self.info)
         self.assertTrue(mock_sendemail.called)
         self.assertTrue(mock_config.get_config_for_key.called)
         (msg_text, subject), kwargs = mock_sendemail.call_args
@@ -152,6 +174,30 @@ class TestListen(unittest.TestCase):
         self.assertTrue(info_ret.get('remnprob') is None)
         self.assertTrue('gcndatetime' in info_ret)
         self.assertTrue('datetime' in info_ret)
+
+    @mock.patch('requests.session')
+    @mock.patch('torosgcn.listen.sendemail')
+    @mock.patch('torosgcn.listen.config.get_config_for_key')
+    @mock.patch('torosgcn.listen.scheduler.generate_targets')
+    def test_upload_gcnnotice(self,
+            mock_gen_targets, mock_get_conf, mock_sendemail, mock_session):
+        mock_gen_targets.return_value = self.obs_trg
+        def get_conf(arg):
+            if arg == 'Broker Upload':
+                return {'site url': 'https://toros.utrgv.edu/',
+                        'login url': 'https://toros.utrgv.edu/account/login/',
+                        'uploadjson url': 'https://toros.utrgv.edu/broker/uploadjson/',
+                        'logout url': 'https://toros.utrgv.edu/account/logout/',
+                        'username': 'admin',
+                        'password': 'yourpassword'}
+            elif arg == 'Admin Emails':
+                return ["admin@example.com"]
+            else:
+                return None
+        mock_get_conf.side_effect = get_conf
+        torosgcn.listen.upload_gcnnotice(self.info)
+        self.assertTrue(mock_sendemail.called)
+        self.assertTrue(mock_session.called)
 
 
 class TestScheduler(unittest.TestCase):
