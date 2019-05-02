@@ -7,7 +7,12 @@ import os
 from . import config
 from . import scheduler
 from loguru import logger
+import requests
 
+def slack_alert(message):
+    email_msg= message
+    sending= '{"text": "'+email_msg+'"}'
+    requests.post(data=sending, url="")
 
 def sendemail(msg_text, subject, recipients=None, attachments=[]):
     """Will send out email with the message text in msg_text (string), subject (string)
@@ -116,7 +121,7 @@ or the GraceDB Event Page: {2}
     recipients = ADMIN_EMAILS if info['role'] == 'test' else None
     sendemail(msg_text, subject, recipients=recipients,
               attachments=[voexml_filename])
-
+    slack_alert(msg_text)
 
 def getinfo(root):
     info = {}
